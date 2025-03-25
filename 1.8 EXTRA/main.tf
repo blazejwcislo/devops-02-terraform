@@ -96,7 +96,7 @@ resource "aws_security_group" "amazon_linux_sg" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = [aws_subnet.public.cidr_block]  # Dostęp tylko z publicznej podsieci (Ubuntu)
+    cidr_blocks = [aws_subnet.public.cidr_block] 
   }
 
   egress {
@@ -107,12 +107,18 @@ resource "aws_security_group" "amazon_linux_sg" {
   }
 }
 
+resource "aws_key_pair" "my_key" {
+  key_name   = "my-key"
+  public_key = file("./my-key.pub")
+}
+
 resource "aws_instance" "ubuntu" {
   ami               = "ami-084568db4383264d4"
   instance_type     = "t2.micro"
   subnet_id         = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.ubuntu_sg.id]
   associate_public_ip_address = true
+  key_name          = aws_key_pair.my_key.key_name 
 
   tags = {
     Name = "Ubuntu-Instance"
@@ -131,11 +137,13 @@ resource "aws_instance" "ubuntu" {
   depends_on = [aws_security_group.ubuntu_sg]
 }
 
+
 resource "aws_instance" "amazon_linux" {
   ami               = "ami-08b5b3a93ed654d19"
   instance_type     = "t2.micro"
   subnet_id         = aws_subnet.private.id
   vpc_security_group_ids = [aws_security_group.amazon_linux_sg.id]
+  key_name          = aws_key_pair.my_key.key_name 
 
   tags = {
     Name = "AmazonLinux-Instance"
@@ -143,10 +151,10 @@ resource "aws_instance" "amazon_linux" {
 
   user_data = <<-EOF
               #!/bin/bash
-              sudo yum update -y
-              sudo yum install -y nginx
-              echo "<html><body><h1>Hello World</h1></body></html>" | sudo tee /usr/share/nginx/html/index.html
-              sudo systemctl start nginx
-              sudo systemctl enable nginx
+              yum update -y
+              yum install -y nginx
+              echo "Hello World - Amazon Linux" > /usr/share/nginx/html/index.html
+              systemctl start nginx
+              systemctl enable nginx
               EOF
 }
